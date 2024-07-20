@@ -8,12 +8,15 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.Scanner;
 
 public class DeleteRecordsMain {
 
     private static int LOG_PER_LINES;
+
+    private static int BATCH_SIZE =50;
     private static int TOTAL_LINES;
     private static int PROCESSED_LINES = 0;
     private static int ROWS_AFFECTED_COUNT;
@@ -39,7 +42,14 @@ public class DeleteRecordsMain {
 
                 String[] values = line.split(",");
                 putValuesInPreparedStatement(preparedStatement, values);
-                ROWS_AFFECTED_COUNT += preparedStatement.executeUpdate();
+                preparedStatement.addBatch();
+
+                if(PROCESSED_LINES % BATCH_SIZE == 0){
+                    int[] ints = preparedStatement.executeBatch();
+                    ROWS_AFFECTED_COUNT += Arrays.stream(ints).sum();
+                    preparedStatement.clearBatch();
+                }
+
                 PROCESSED_LINES++;
 
                 logPercentage();
@@ -67,7 +77,7 @@ public class DeleteRecordsMain {
 
     private static void putValuesInPreparedStatement(PreparedStatement preparedStatement, String[] values) throws SQLException {
         for (int i = 0; i < values.length; i++) {
-            preparedStatement.setString(i + 1, values[i]);
+            preparedStatement.setInt(i + 1, Integer.valueOf(values[i]));
         }
     }
 
