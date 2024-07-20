@@ -61,7 +61,7 @@ public class DeleteRecordsMain {
     private static void logPercentage(){
         if (PROCESSED_LINES % LOG_PER_LINES == 0) {
             int percentage = (PROCESSED_LINES * 100) / TOTAL_LINES;
-            System.out.println("Executed " + percentage + "% of the lines, " + ROWS_AFFECTED_COUNT +" rows affected. Time passed: " + ((System.currentTimeMillis() - START_TIME) / 1000) + " seconds");
+            System.out.println("Executed " + percentage + "% (" + PROCESSED_LINES + " of the lines, " + ROWS_AFFECTED_COUNT +" rows affected. Time passed: " + ((System.currentTimeMillis() - START_TIME) / 1000) + " seconds");
         }
     }
 
