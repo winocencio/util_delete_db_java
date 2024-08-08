@@ -1,5 +1,6 @@
 package com.winocencio.util.v1;
 
+import com.winocencio.util.core.Util;
 import com.winocencio.util.v1.domain.PropertiesDomain;
 
 import java.io.*;
@@ -35,13 +36,13 @@ public class DeleteRecordsMain {
             String line = reader.readLine();
             String[] primaryKeyColumns = line.split(",");
 
-            String sqlDelete = createSqlDelete(propertiesDomain.getTable(), primaryKeyColumns);
+            String sqlDelete = Util.createSqlDelete(propertiesDomain.getTable(), primaryKeyColumns);
             PreparedStatement preparedStatement = conn.prepareStatement(sqlDelete);
 
             while ((line = reader.readLine()) != null) {
 
                 String[] values = line.split(",");
-                putValuesInPreparedStatement(preparedStatement, values);
+                Util.putValuesInPreparedStatement(preparedStatement, values);
                 preparedStatement.addBatch();
 
                 if(PROCESSED_LINES % BATCH_SIZE == 0){
@@ -75,22 +76,8 @@ public class DeleteRecordsMain {
         }
     }
 
-    private static void putValuesInPreparedStatement(PreparedStatement preparedStatement, String[] values) throws SQLException {
-        for (int i = 0; i < values.length; i++) {
-            preparedStatement.setInt(i + 1, Integer.valueOf(values[i]));
-        }
-    }
 
-    private static String createSqlDelete(String tableName, String[] primaryKeyColumns) {
-        String sql = "DELETE FROM " + tableName + " WHERE ";
-        for (int i = 0; i < primaryKeyColumns.length; i++) {
-            String columnName = primaryKeyColumns[i];
-            if (i != 0)
-                sql += " AND ";
-            sql += columnName + " = ?";
-        }
-        return sql;
-    }
+
 
     private static PropertiesDomain getPropertiesDomainByProperties(String propertiesName) throws IOException {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
