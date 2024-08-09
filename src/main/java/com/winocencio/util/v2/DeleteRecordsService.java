@@ -13,6 +13,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.winocencio.util.v2.DeleteRecordsMain.START_TIME;
 
@@ -28,10 +29,14 @@ public class DeleteRecordsService {
         TOTAL_BY_TABLE = dataLines.size();
         TOTAL_GENERAL = TOTAL_BY_TABLE * tables.size();
 
-        ExecutorService executorService = Executors.newFixedThreadPool(tables.size());
+        List<List<String>> listOfDataLines = Util.batches(dataLines, (int) Math.ceil((float)dataLines.size() / (float)PropertiesDomain.getExecutionSpliter() )).toList();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(tables.size() * listOfDataLines.size());
         List<Callable<Void>> callableList = new ArrayList<>();
         for (String table : tables) {
-            callableList.add(this.executeDeleteInTable(null,table,primaryKeyColumns,dataLines));
+            for (List<String> dataLinesSplit : listOfDataLines) {
+                callableList.add(this.executeDeleteInTable(null,table,primaryKeyColumns,dataLinesSplit));
+            }
         }
         executorService.invokeAll(callableList);
     }
@@ -66,7 +71,7 @@ public class DeleteRecordsService {
     private static void logPercentage(Integer processedLinesByTable, Integer totalLines, Integer rowsAffectedCount){
         if (processedLinesByTable % PropertiesDomain.getLogPerLine() == 0) {
             int percentage = (processedLinesByTable * 100) / totalLines;
-            System.out.println("Executed " + percentage + "% (" + processedLinesByTable + " of the lines, " + rowsAffectedCount +" rows affected. Time passed: " + ((System.currentTimeMillis() - START_TIME) / 1000) + " seconds -" + Thread.currentThread().getName());
+            System.out.println("Executed " + percentage + "% (" + processedLinesByTable + " of the lines, " + rowsAffectedCount +" rows affected. Time passed: " + ((System.currentTimeMillis() - START_TIME) / 1000) + " seconds - " + Thread.currentThread().getName());
         }
     }
 }

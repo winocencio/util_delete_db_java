@@ -41,3 +41,17 @@ java -jar target/util_delete_db_java-1.0-jar-with-dependencies.jar
 ### 7. Contributions
 
 If you have any suggestions, improvements, or fixes for the code, feel free to contribute to the project's GitHub repository.
+
+
+## 8 Results:
+270602 lines in data.csv
+
+first 30 seconds
+1 table - 1 split - 1 thread?
+Executed 7% (19300 of the lines, 0 rows affected. Time passed: 30 seconds - main
+3 tables - 1 split - 3 threads?
+Executed 6% (53900 of the lines, 0 rows affected. Time passed: 30 seconds - pool-1-thread-3
+3 tables - 3 split - 9 threads?
+Executed 13% (112300 of the lines, 0 rows affected. Time passed: 30 seconds - pool-1-thread-4
+3 tables - 3 split - 12 threads?
+Executed 15% (125800 of the lines, 0 rows affected. Time passed: 30 seconds - pool-1-thread-10

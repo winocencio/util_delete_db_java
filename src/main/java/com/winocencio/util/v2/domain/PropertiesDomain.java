@@ -13,12 +13,15 @@ public class PropertiesDomain {
     private static String table;
     private static int logPerLine;
 
-    public static void set(String urlOut, String userOut, String passwordOut, String tableOut, int logPerLineOut) {
+    private static int executionSpliter;
+
+    public static void set(String urlOut, String userOut, String passwordOut, String tableOut, int logPerLineOut,int executionSpliterOut) {
         url = urlOut;
         user = userOut;
         password = passwordOut;
         table = tableOut;
         logPerLine = logPerLineOut;
+        executionSpliter = executionSpliterOut;
     }
 
     public static String getUrl() {
@@ -40,6 +43,9 @@ public class PropertiesDomain {
     public static int getLogPerLine() {
         return logPerLine;
     }
+    public static int getExecutionSpliter() {
+        return executionSpliter;
+    }
 
     public static void setPropertiesDomainByProperties(String propertiesName) throws IOException {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
@@ -47,6 +53,12 @@ public class PropertiesDomain {
         Properties props = new Properties();
         props.load(is);
 
-        PropertiesDomain.set(props.getProperty("db.url"), props.getProperty("db.user"), props.getProperty("db.password"), props.getProperty("db.table"), Integer.valueOf(props.getProperty("db.log_per_line")));
+        PropertiesDomain.set(
+            props.getProperty("db.url"),
+            props.getProperty("db.user"),
+            props.getProperty("db.password"),
+            props.getProperty("db.table"),
+            Integer.valueOf(props.getProperty("db.log_per_line")),
+            Integer.valueOf(props.getProperty("db.v2.execution_spliter")));
     }
 }
