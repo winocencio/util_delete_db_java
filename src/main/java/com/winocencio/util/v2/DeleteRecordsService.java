@@ -12,37 +12,61 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.winocencio.util.v2.DeleteRecordsMain.START_TIME;
 
 public class DeleteRecordsService {
 
-    public void executeDeleteInTable(String table,String[] primaryKeyColumns ,List<String> dataLines) throws SQLException {
+    private static final AtomicInteger PROCESSED_LINES_GENERAL = new AtomicInteger(0);
+    private static final AtomicInteger PROCESSED_LINES_BY_TABLE = new AtomicInteger(0);
 
-        try (Connection conn = DriverManager.getConnection(PropertiesDomain.getUrl(), PropertiesDomain.getUser(), PropertiesDomain.getPassword())) {
-            String sqlDelete = Util.createSqlDelete(PropertiesDomain.getTable(), primaryKeyColumns);
+    private static Integer TOTAL_GENERAL;
+    private static Integer TOTAL_BY_TABLE;
 
-            ExecutorService executorService = Executors.newFixedThreadPool(5);
+    public void executeDeleteInAllTables(List<String>  tables,String[] primaryKeyColumns ,List<String> dataLines) throws SQLException, InterruptedException {
+        TOTAL_BY_TABLE = dataLines.size();
+        TOTAL_GENERAL = TOTAL_BY_TABLE * tables.size();
 
-            List<Callable<Void>> callableList = new ArrayList<>();
-            for (String dataLine : dataLines) {
-                callableList.add(executeDeleteInDataLine(conn, sqlDelete, dataLine));
-            }
-
-            executorService.invokeAll(callableList);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        ExecutorService executorService = Executors.newFixedThreadPool(tables.size());
+        List<Callable<Void>> callableList = new ArrayList<>();
+        for (String table : tables) {
+            callableList.add(this.executeDeleteInTable(null,table,primaryKeyColumns,dataLines));
         }
-
+        executorService.invokeAll(callableList);
     }
 
-    private Callable<Void> executeDeleteInDataLine(Connection conn, String sqlDelete, String dataLine){
+    public Callable<Void> executeDeleteInTable(Connection conn2, String table, String[] primaryKeyColumns , List<String> dataLines) throws SQLException {
         return () -> {
+            try (Connection conn = DriverManager.getConnection(PropertiesDomain.getUrl(), PropertiesDomain.getUser(), PropertiesDomain.getPassword())) {
+            String sqlDelete = Util.createSqlDelete(table, primaryKeyColumns);
+
+            for (String dataLine : dataLines) {
+                executeDeleteInDataLine(conn, sqlDelete, dataLine);
+            }
+            return null;
+            }
+        };
+    }
+
+    private void executeDeleteInDataLine(Connection conn, String sqlDelete, String dataLine) throws SQLException {
+
             String[] values = dataLine.split(",");
 
             PreparedStatement preparedStatement = conn.prepareStatement(sqlDelete);
             Util.putValuesInPreparedStatement(preparedStatement, values);
-            int i = preparedStatement.executeUpdate();
-            System.out.println(i + "lines deleted");
-            return null;
-        };
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            int processedLinesGeneral = PROCESSED_LINES_GENERAL.incrementAndGet();
+            int processedLinesByTable = PROCESSED_LINES_BY_TABLE.incrementAndGet();
+
+            logPercentage(processedLinesByTable,TOTAL_GENERAL,rowsAffected);
+    }
+
+    private static void logPercentage(Integer processedLinesByTable, Integer totalLines, Integer rowsAffectedCount){
+        if (processedLinesByTable % PropertiesDomain.getLogPerLine() == 0) {
+            int percentage = (processedLinesByTable * 100) / totalLines;
+            System.out.println("Executed " + percentage + "% (" + processedLinesByTable + " of the lines, " + rowsAffectedCount +" rows affected. Time passed: " + ((System.currentTimeMillis() - START_TIME) / 1000) + " seconds -" + Thread.currentThread().getName());
+        }
     }
 }

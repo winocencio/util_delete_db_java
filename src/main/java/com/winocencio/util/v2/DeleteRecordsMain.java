@@ -7,14 +7,14 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.winocencio.util.v2.domain.PropertiesDomain.setPropertiesDomainByProperties;
 
 public class DeleteRecordsMain {
 
-    private static final long START_TIME = System.currentTimeMillis();
-
-    public static void main(String[] args) throws IOException, SQLException {
+    static final Long START_TIME = System.currentTimeMillis();
+    public static void main(String[] args) throws IOException, SQLException, InterruptedException {
         setPropertiesDomainByProperties("db.properties");
         //LOG_PER_LINES = propertiesDomain.getLogPerLine();
 
@@ -29,9 +29,7 @@ public class DeleteRecordsMain {
 
         List<String> tables = List.of(PropertiesDomain.getTable().split(","));
 
-        for (String table : tables) {
-            new DeleteRecordsService().executeDeleteInTable(table,primaryKeyColumns,dataLines);
-        }
+        new DeleteRecordsService().executeDeleteInAllTables(tables,primaryKeyColumns,dataLines);
     }
 
 

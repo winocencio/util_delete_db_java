@@ -37,7 +37,7 @@ public class PropertiesDomain {
         return table;
     }
 
-    public int getLogPerLine() {
+    public static int getLogPerLine() {
         return logPerLine;
     }
 
