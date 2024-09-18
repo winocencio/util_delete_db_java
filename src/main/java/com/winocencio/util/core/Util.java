@@ -21,7 +21,7 @@ public class Util {
 
     public static void putValuesInPreparedStatement(PreparedStatement preparedStatement, String[] values) throws SQLException {
         for (int i = 0; i < values.length; i++) {
-            preparedStatement.setInt(i + 1, Integer.valueOf(values[i]));
+            preparedStatement.setString(i + 1, values[i]);
         }
     }
 

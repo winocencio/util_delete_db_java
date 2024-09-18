@@ -8,12 +8,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.winocencio.util.v2.DeleteRecordsMain.START_TIME;
 
@@ -25,7 +25,7 @@ public class DeleteRecordsService {
     private static Integer TOTAL_GENERAL;
     private static Integer TOTAL_BY_TABLE;
 
-    public void executeDeleteInAllTables(List<String>  tables,String[] primaryKeyColumns ,List<String> dataLines) throws SQLException, InterruptedException {
+    public void executeDeleteInAllTables(List<String>  tables,String[] primaryKeyColumns ,List<String> dataLines) throws InterruptedException {
         TOTAL_BY_TABLE = dataLines.size();
         TOTAL_GENERAL = TOTAL_BY_TABLE * tables.size();
 
@@ -38,20 +38,56 @@ public class DeleteRecordsService {
                 callableList.add(this.executeDeleteInTable(null,table,primaryKeyColumns,dataLinesSplit));
             }
         }
+
         executorService.invokeAll(callableList);
+        awaitTerminationAfterShutdown(executorService);
     }
 
-    public Callable<Void> executeDeleteInTable(Connection conn2, String table, String[] primaryKeyColumns , List<String> dataLines) throws SQLException {
+    public void awaitTerminationAfterShutdown(ExecutorService threadPool) {
+        threadPool.shutdown();
+        try {
+            if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                threadPool.shutdownNow();
+            }
+        } catch (InterruptedException ex) {
+            threadPool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public Callable<Void> executeDeleteInTable(Connection conn2, String table, String[] primaryKeyColumns , List<String> dataLines) {
         return () -> {
             try (Connection conn = DriverManager.getConnection(PropertiesDomain.getUrl(), PropertiesDomain.getUser(), PropertiesDomain.getPassword())) {
-            String sqlDelete = Util.createSqlDelete(table, primaryKeyColumns);
+                String sqlDelete = Util.createSqlDelete(table, primaryKeyColumns);
 
-            for (String dataLine : dataLines) {
-                executeDeleteInDataLine(conn, sqlDelete, dataLine);
+                executeDeleteInDataLineBatch(conn, sqlDelete, dataLines);
+                /*for (String dataLine : dataLines) {
+                    executeDeleteInDataLine(conn, sqlDelete, dataLine);
+                }*/
+            }catch (Exception e){
+                System.out.println(e.getMessage());
             }
             return null;
-            }
         };
+    }
+
+    private void executeDeleteInDataLineBatch(Connection conn, String sqlDelete, List<String> dataLineList) throws SQLException {
+
+        PreparedStatement preparedStatement = conn.prepareStatement(sqlDelete);
+        List<List<String>> dataLinebatch = Util.batches(dataLineList, PropertiesDomain.getBatchSize()).toList();
+        int processedLinesByTable = 0;
+
+        for (List<String> dataLineListMinor : dataLinebatch) {
+            for (String dataLine : dataLineListMinor) {
+                String[] values = dataLine.split(",");
+                Util.putValuesInPreparedStatement(preparedStatement, values);
+                preparedStatement.addBatch();
+                int processedLinesGeneral = PROCESSED_LINES_GENERAL.incrementAndGet();
+                processedLinesByTable = PROCESSED_LINES_BY_TABLE.incrementAndGet();
+            }
+            int[] rowsAffected = preparedStatement.executeBatch();
+            logPercentage(processedLinesByTable,TOTAL_GENERAL,Arrays.stream(rowsAffected).boxed().mapToInt(value -> value).sum());
+        }
     }
 
     private void executeDeleteInDataLine(Connection conn, String sqlDelete, String dataLine) throws SQLException {
